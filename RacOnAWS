@@ -1,0 +1,443 @@
+root@oracle11g:/root# aws ec2 create-vpc --cidr-block 10.0.0.0/16
+{
+    "Vpc": {
+        "VpcId": "vpc-0416a7bcb2aaab8d7", 
+        "InstanceTenancy": "default", 
+        "Tags": [], 
+        "CidrBlockAssociationSet": [
+            {
+                "AssociationId": "vpc-cidr-assoc-0c22513edaaad2089", 
+                "CidrBlock": "10.0.0.0/16", 
+                "CidrBlockState": {
+                    "State": "associated"
+                }
+            }
+        ], 
+        "Ipv6CidrBlockAssociationSet": [], 
+        "State": "pending", 
+        "DhcpOptionsId": "dopt-8c4e0eeb", 
+        "OwnerId": "664695030410", 
+        "CidrBlock": "10.0.0.0/16", 
+        "IsDefault": false
+    }
+}
+
+VPC : vpc-0416a7bcb2aaab8d7
+IGW : igw-01901023e8804c131
+RouteTable : rtb-011530d0dcd93d04c
+Subnet : subnet-00373f863af86ec6a
+SG : sg-0069a4a07ccb410f9
+
+
+root@oracle11g:/root# aws ec2 create-tags --tags Key=Name,Value=MyRacVPC --resources vpc-0416a7bcb2aaab8d7
+aws ec2 modify-vpc-attribute --vpc-id vpc-0416a7bcb2aaab8d7 --enable-dns-support
+aws ec2 modify-vpc-attribute --vpc-id vpc-0416a7bcb2aaab8d7 --enable-dns-hostnames
+
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --internet-gateway-id igw-01901023e8804c131 --vpc-id vpc-0416a7bcb2aaab8d7
+root@oracle11g:/root# aws ec2 describe-route-tables --filters "Name=vpc-id,Values=vpc-0416a7bcb2aaab8d7"
+{
+    "RouteTables": [
+        {
+            "Associations": [
+                {
+                    "RouteTableAssociationId": "rtbassoc-0473b8cd832f59fc7", 
+                    "Main": true, 
+                    "RouteTableId": "rtb-011530d0dcd93d04c"
+                }
+            ], 
+            "RouteTableId": "rtb-011530d0dcd93d04c", 
+            "VpcId": "vpc-0416a7bcb2aaab8d7", 
+            "PropagatingVgws": [], 
+            "Tags": [], 
+            "Routes": [
+                {
+                    "GatewayId": "local", 
+                    "DestinationCidrBlock": "10.0.0.0/16", 
+                    "State": "active", 
+                    "Origin": "CreateRouteTable"
+                }
+            ], 
+            "OwnerId": "664695030410"
+        }
+    ]
+}
+aws ec2 create-route --route-table-id rtb-011530d0dcd93d04c --destination-cidr-block 0.0.0.0/0 --gateway-id igw-01901023e8804c131
+root@oracle11g:/root# aws ec2 create-subnet --vpc-id vpc-0416a7bcb2aaab8d7 --cidr-block 10.0.0.0/24
+{
+    "Subnet": {
+        "MapPublicIpOnLaunch": false, 
+        "AvailabilityZoneId": "apse2-az3", 
+        "AvailableIpAddressCount": 251, 
+        "DefaultForAz": false, 
+        "SubnetArn": "arn:aws:ec2:ap-southeast-2:664695030410:subnet/subnet-00373f863af86ec6a", 
+        "Ipv6CidrBlockAssociationSet": [], 
+        "VpcId": "vpc-0416a7bcb2aaab8d7", 
+        "State": "pending", 
+        "AvailabilityZone": "ap-southeast-2a", 
+        "SubnetId": "subnet-00373f863af86ec6a", 
+        "OwnerId": "664695030410", 
+        "CidrBlock": "10.0.0.0/24", 
+        "AssignIpv6AddressOnCreation": false
+    }
+}
+
+aws ec2 create-tags --resources subnet-00373f863af86ec6a --tags Key=Name,Value=Subnet1
+
+root@oracle11g:/root# aws ec2 create-security-group --group-name MyRACSecurityGroup --description "My RAC Security Group" --vpc-id vpc-0416a7bcb2aaab8d7
+{
+    "GroupId": "sg-0069a4a07ccb410f9"
+}
+
+aws ec2 authorize-security-group-ingress --group-id sg-0069a4a07ccb410f9 --protocol -1 --port -1 --source-group sg-0069a4a07ccb410f9
+
+
+aws ec2 run-instances --image-id ami-c5b2dfff --instance-type m3.medium --key MyRACKeyPair \
+--placement AvailabilityZone=ap-southeast-2a --associate-public-ip-address --subnet subnet-00373f863af86ec6a \
+--private-ip-address 10.0.0.200 --security-group-ids sg-0069a4a07ccb410f9 \
+--block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":15,"DeleteOnTermination":true,"VolumeType":"standard"}}]' \
+--block-device-mappings '[{"DeviceName":"/dev/xvdb","Ebs":{"VolumeSize":10,"DeleteOnTermination":true,"VolumeType":"standard"}}]' \
+--block-device-mappings '[{"DeviceName":"/dev/xvdc","Ebs":{"VolumeSize":10,"DeleteOnTermination":true,"VolumeType":"standard"}}]' 
+{
+    "Instances": [
+        {
+            "Monitoring": {
+                "State": "disabled"
+            }, 
+            "StateReason": {
+                "Message": "pending", 
+                "Code": "pending"
+            }, 
+            "PublicDnsName": "", 
+            "RootDeviceType": "ebs", 
+            "State": {
+                "Code": 0, 
+                "Name": "pending"
+            }, 
+            "EbsOptimized": false, 
+            "LaunchTime": "2019-11-07T23:11:04.000Z", 
+            "PrivateIpAddress": "10.0.0.200", 
+            "ProductCodes": [], 
+            "VpcId": "vpc-0416a7bcb2aaab8d7", 
+            "CpuOptions": {
+                "CoreCount": 1, 
+                "ThreadsPerCore": 1
+            }, 
+            "StateTransitionReason": "", 
+            "InstanceId": "i-01649d388f3de19e7", 
+            "ImageId": "ami-c5b2dfff", 
+            "PrivateDnsName": "ip-10-0-0-200.ap-southeast-2.compute.internal", 
+            "KeyName": "MyRACKeyPair", 
+            "SecurityGroups": [
+                {
+                    "GroupName": "MyRACSecurityGroup", 
+                    "GroupId": "sg-0069a4a07ccb410f9"
+                }
+            ], 
+            "ClientToken": "", 
+            "SubnetId": "subnet-00373f863af86ec6a", 
+            "InstanceType": "m3.medium", 
+            "CapacityReservationSpecification": {
+                "CapacityReservationPreference": "open"
+            }, 
+            "NetworkInterfaces": [
+                {
+                    "Status": "in-use", 
+                    "MacAddress": "06:f6:df:5e:96:c4", 
+                    "SourceDestCheck": true, 
+                    "VpcId": "vpc-0416a7bcb2aaab8d7", 
+                    "Description": "", 
+                    "NetworkInterfaceId": "eni-014c674d116f36da0", 
+                    "PrivateIpAddresses": [
+                        {
+                            "PrivateDnsName": "ip-10-0-0-200.ap-southeast-2.compute.internal", 
+                            "Primary": true, 
+                            "PrivateIpAddress": "10.0.0.200"
+                        }
+                    ], 
+                    "PrivateDnsName": "ip-10-0-0-200.ap-southeast-2.compute.internal", 
+                    "InterfaceType": "interface", 
+                    "Attachment": {
+                        "Status": "attaching", 
+                        "DeviceIndex": 0, 
+                        "DeleteOnTermination": true, 
+                        "AttachmentId": "eni-attach-05b0f160bd149ce0f", 
+                        "AttachTime": "2019-11-07T23:11:04.000Z"
+                    }, 
+                    "Groups": [
+                        {
+                            "GroupName": "MyRACSecurityGroup", 
+                            "GroupId": "sg-0069a4a07ccb410f9"
+                        }
+                    ], 
+                    "Ipv6Addresses": [], 
+                    "OwnerId": "664695030410", 
+                    "SubnetId": "subnet-00373f863af86ec6a", 
+                    "PrivateIpAddress": "10.0.0.200"
+                }
+            ], 
+            "SourceDestCheck": true, 
+            "Placement": {
+                "Tenancy": "default", 
+                "GroupName": "", 
+                "AvailabilityZone": "ap-southeast-2a"
+            }, 
+            "Hypervisor": "xen", 
+            "BlockDeviceMappings": [], 
+            "Architecture": "x86_64", 
+            "KernelId": "aki-c362fff9", 
+            "RootDeviceName": "/dev/sda1", 
+            "VirtualizationType": "paravirtual", 
+            "AmiLaunchIndex": 0
+        }
+    ], 
+    "ReservationId": "r-0bfac125acad76c81", 
+    "Groups": [], 
+    "OwnerId": "664695030410"
+}
+
+
+aws ec2 create-tags --resources i-01649d388f3de19e7 --tags Key=Name,Value=sto1
+
+
+aws ec2 run-instances --image-id ami-c5b2dfff --instance-type m3.medium --key MyRACKeyPair \
+--placement AvailabilityZone=ap-southeast-2a --associate-public-ip-address --subnet subnet-00373f863af86ec6a \
+--private-ip-address 10.0.0.100 --secondary-private-ip-address-count 4 --security-group-ids sg-0069a4a07ccb410f9 \
+--block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":20,"DeleteOnTermination":true,"VolumeType":"standard"}}]'
+{
+    "Instances": [
+        {
+            "Monitoring": {
+                "State": "disabled"
+            }, 
+            "StateReason": {
+                "Message": "pending", 
+                "Code": "pending"
+            }, 
+            "PublicDnsName": "", 
+            "RootDeviceType": "ebs", 
+            "State": {
+                "Code": 0, 
+                "Name": "pending"
+            }, 
+            "EbsOptimized": false, 
+            "LaunchTime": "2019-11-07T23:11:39.000Z", 
+            "PrivateIpAddress": "10.0.0.100", 
+            "ProductCodes": [], 
+            "VpcId": "vpc-0416a7bcb2aaab8d7", 
+            "CpuOptions": {
+                "CoreCount": 1, 
+                "ThreadsPerCore": 1
+            }, 
+            "StateTransitionReason": "", 
+            "InstanceId": "i-0b2148272dc139987", 
+            "ImageId": "ami-c5b2dfff", 
+            "PrivateDnsName": "ip-10-0-0-100.ap-southeast-2.compute.internal", 
+            "KeyName": "MyRACKeyPair", 
+            "SecurityGroups": [
+                {
+                    "GroupName": "MyRACSecurityGroup", 
+                    "GroupId": "sg-0069a4a07ccb410f9"
+                }
+            ], 
+            "ClientToken": "", 
+            "SubnetId": "subnet-00373f863af86ec6a", 
+            "InstanceType": "m3.medium", 
+            "CapacityReservationSpecification": {
+                "CapacityReservationPreference": "open"
+            }, 
+            "NetworkInterfaces": [
+                {
+                    "Status": "in-use", 
+                    "MacAddress": "06:31:24:fa:cd:6a", 
+                    "SourceDestCheck": true, 
+                    "VpcId": "vpc-0416a7bcb2aaab8d7", 
+                    "Description": "", 
+                    "NetworkInterfaceId": "eni-02c0870705ac6ea21", 
+                    "PrivateIpAddresses": [
+                        {
+                            "PrivateDnsName": "ip-10-0-0-100.ap-southeast-2.compute.internal", 
+                            "Primary": true, 
+                            "PrivateIpAddress": "10.0.0.100"
+                        }, 
+                        {
+                            "PrivateDnsName": "ip-10-0-0-4.ap-southeast-2.compute.internal", 
+                            "Primary": false, 
+                            "PrivateIpAddress": "10.0.0.4"
+                        }, 
+                        {
+                            "PrivateDnsName": "ip-10-0-0-20.ap-southeast-2.compute.internal", 
+                            "Primary": false, 
+                            "PrivateIpAddress": "10.0.0.20"
+                        }, 
+                        {
+                            "PrivateDnsName": "ip-10-0-0-232.ap-southeast-2.compute.internal", 
+                            "Primary": false, 
+                            "PrivateIpAddress": "10.0.0.232"
+                        }, 
+                        {
+                            "PrivateDnsName": "ip-10-0-0-254.ap-southeast-2.compute.internal", 
+                            "Primary": false, 
+                            "PrivateIpAddress": "10.0.0.254"
+                        }
+                    ], 
+                    "PrivateDnsName": "ip-10-0-0-100.ap-southeast-2.compute.internal", 
+                    "InterfaceType": "interface", 
+                    "Attachment": {
+                        "Status": "attaching", 
+                        "DeviceIndex": 0, 
+                        "DeleteOnTermination": true, 
+                        "AttachmentId": "eni-attach-01eb160f1e9dfdecf", 
+                        "AttachTime": "2019-11-07T23:11:39.000Z"
+                    }, 
+                    "Groups": [
+                        {
+                            "GroupName": "MyRACSecurityGroup", 
+                            "GroupId": "sg-0069a4a07ccb410f9"
+                        }
+                    ], 
+                    "Ipv6Addresses": [], 
+                    "OwnerId": "664695030410", 
+                    "SubnetId": "subnet-00373f863af86ec6a", 
+                    "PrivateIpAddress": "10.0.0.100"
+                }
+            ], 
+            "SourceDestCheck": true, 
+            "Placement": {
+                "Tenancy": "default", 
+                "GroupName": "", 
+                "AvailabilityZone": "ap-southeast-2a"
+            }, 
+            "Hypervisor": "xen", 
+            "BlockDeviceMappings": [], 
+            "Architecture": "x86_64", 
+            "KernelId": "aki-c362fff9", 
+            "RootDeviceName": "/dev/sda1", 
+            "VirtualizationType": "paravirtual", 
+            "AmiLaunchIndex": 0
+        }
+    ], 
+    "ReservationId": "r-0e6a12a449e4f147e", 
+    "Groups": [], 
+    "OwnerId": "664695030410"
+}
+
+
+
+aws ec2 create-tags --resources i-0b2148272dc139987 --tags Key=Name,Value=db1
+
+
+aws ec2 run-instances --image-id ami-c5b2dfff --instance-type m3.medium --key MyRACKeyPair \
+--placement AvailabilityZone=ap-southeast-2a --associate-public-ip-address --subnet subnet-00373f863af86ec6a \
+--private-ip-address 10.0.0.101 --secondary-private-ip-address-count 1 --security-group-ids sg-0069a4a07ccb410f9 \
+--block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":20,"DeleteOnTermination":true,"VolumeType":"standard"}}]' 
+{
+    "Instances": [
+        {
+            "Monitoring": {
+                "State": "disabled"
+            }, 
+            "StateReason": {
+                "Message": "pending", 
+                "Code": "pending"
+            }, 
+            "PublicDnsName": "", 
+            "RootDeviceType": "ebs", 
+            "State": {
+                "Code": 0, 
+                "Name": "pending"
+            }, 
+            "EbsOptimized": false, 
+            "LaunchTime": "2019-11-07T23:12:35.000Z", 
+            "PrivateIpAddress": "10.0.0.101", 
+            "ProductCodes": [], 
+            "VpcId": "vpc-0416a7bcb2aaab8d7", 
+            "CpuOptions": {
+                "CoreCount": 1, 
+                "ThreadsPerCore": 1
+            }, 
+            "StateTransitionReason": "", 
+            "InstanceId": "i-0d01a8f13409ce11e", 
+            "ImageId": "ami-c5b2dfff", 
+            "PrivateDnsName": "ip-10-0-0-101.ap-southeast-2.compute.internal", 
+            "KeyName": "MyRACKeyPair", 
+            "SecurityGroups": [
+                {
+                    "GroupName": "MyRACSecurityGroup", 
+                    "GroupId": "sg-0069a4a07ccb410f9"
+                }
+            ], 
+            "ClientToken": "", 
+            "SubnetId": "subnet-00373f863af86ec6a", 
+            "InstanceType": "m3.medium", 
+            "CapacityReservationSpecification": {
+                "CapacityReservationPreference": "open"
+            }, 
+            "NetworkInterfaces": [
+                {
+                    "Status": "in-use", 
+                    "MacAddress": "06:a3:81:52:ca:84", 
+                    "SourceDestCheck": true, 
+                    "VpcId": "vpc-0416a7bcb2aaab8d7", 
+                    "Description": "", 
+                    "NetworkInterfaceId": "eni-022ade6703ed831a7", 
+                    "PrivateIpAddresses": [
+                        {
+                            "PrivateDnsName": "ip-10-0-0-101.ap-southeast-2.compute.internal", 
+                            "Primary": true, 
+                            "PrivateIpAddress": "10.0.0.101"
+                        }, 
+                        {
+                            "PrivateDnsName": "ip-10-0-0-139.ap-southeast-2.compute.internal", 
+                            "Primary": false, 
+                            "PrivateIpAddress": "10.0.0.139"
+                        }
+                    ], 
+                    "PrivateDnsName": "ip-10-0-0-101.ap-southeast-2.compute.internal", 
+                    "InterfaceType": "interface", 
+                    "Attachment": {
+                        "Status": "attaching", 
+                        "DeviceIndex": 0, 
+                        "DeleteOnTermination": true, 
+                        "AttachmentId": "eni-attach-0de865c767a4699d5", 
+                        "AttachTime": "2019-11-07T23:12:35.000Z"
+                    }, 
+                    "Groups": [
+                        {
+                            "GroupName": "MyRACSecurityGroup", 
+                            "GroupId": "sg-0069a4a07ccb410f9"
+                        }
+                    ], 
+                    "Ipv6Addresses": [], 
+                    "OwnerId": "664695030410", 
+                    "SubnetId": "subnet-00373f863af86ec6a", 
+                    "PrivateIpAddress": "10.0.0.101"
+                }
+            ], 
+            "SourceDestCheck": true, 
+            "Placement": {
+                "Tenancy": "default", 
+                "GroupName": "", 
+                "AvailabilityZone": "ap-southeast-2a"
+            }, 
+            "Hypervisor": "xen", 
+            "BlockDeviceMappings": [], 
+            "Architecture": "x86_64", 
+            "KernelId": "aki-c362fff9", 
+            "RootDeviceName": "/dev/sda1", 
+            "VirtualizationType": "paravirtual", 
+            "AmiLaunchIndex": 0
+        }
+    ], 
+    "ReservationId": "r-038b147c0cb9b342a", 
+    "Groups": [], 
+    "OwnerId": "664695030410"
+}
+
+aws ec2 create-tags --resources i-0d01a8f13409ce11e --tags Key=Name,Value=db2
+
+
+### Configure Storage Node
+
+
+### Configure db1 node
