@@ -1,3 +1,5 @@
+http://db.geeksinsight.com/wp-content/uploads/2016/05/Installing-Two-Node-RAC-in-AWS-Cloud.pdf
+
 root@oracle11g:/root# aws ec2 create-vpc --cidr-block 10.0.0.0/16
 {
     "Vpc": {
